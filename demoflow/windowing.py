@@ -25,8 +25,11 @@ def _windows_win32() -> list[WindowInfo]:
             continue
         try:
             result.append(WindowInfo(
-                id=f"win:{i}:{title}", title=title, owner="",
-                left=int(win.left), top=int(win.top), width=int(win.width), height=int(win.height),
+                id=f"win:{i}:{title}",
+                title=title,
+                owner="",
+                left=int(win.left), top=int(win.top),
+                width=int(win.width), height=int(win.height),
             ))
         except Exception:
             continue
@@ -34,21 +37,28 @@ def _windows_win32() -> list[WindowInfo]:
 
 
 def _windows_macos() -> list[WindowInfo]:
-    from Quartz import CGWindowListCopyWindowInfo, kCGWindowListOptionOnScreenOnly, kCGNullWindowID
+    from Quartz import (
+        CGWindowListCopyWindowInfo,
+        kCGWindowListOptionOnScreenOnly,
+        kCGNullWindowID,
+    )
     raw = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID)
     result: list[WindowInfo] = []
     for item in raw:
         bounds = item.get("kCGWindowBounds", {})
-        if int(item.get("kCGWindowLayer", 0)) != 0:
+        layer = int(item.get("kCGWindowLayer", 0))
+        if layer != 0:
             continue
-        width = int(bounds.get("Width", 0)); height = int(bounds.get("Height", 0))
+        width = int(bounds.get("Width", 0))
+        height = int(bounds.get("Height", 0))
         if width < 200 or height < 120:
             continue
         result.append(WindowInfo(
             id=str(item.get("kCGWindowNumber", "")),
             title=str(item.get("kCGWindowName") or "(janela)").strip(),
             owner=str(item.get("kCGWindowOwnerName") or "").strip(),
-            left=int(bounds.get("X", 0)), top=int(bounds.get("Y", 0)), width=width, height=height,
+            left=int(bounds.get("X", 0)), top=int(bounds.get("Y", 0)),
+            width=width, height=height,
         ))
     return _dedupe(result)
 
@@ -62,7 +72,10 @@ def _windows_linux() -> list[WindowInfo]:
             continue
         wid, _, x, y, w, h, host, title = parts
         try:
-            result.append(WindowInfo(id=wid, title=title.strip(), owner=host, left=int(x), top=int(y), width=int(w), height=int(h)))
+            result.append(WindowInfo(
+                id=wid, title=title.strip(), owner=host,
+                left=int(x), top=int(y), width=int(w), height=int(h),
+            ))
         except ValueError:
             pass
     return _dedupe(result)
@@ -71,15 +84,20 @@ def _windows_linux() -> list[WindowInfo]:
 def list_windows(browser_only: bool = False) -> list[WindowInfo]:
     system = platform.system()
     try:
-        if system == "Windows": wins = _windows_win32()
-        elif system == "Darwin": wins = _windows_macos()
-        else: wins = _windows_linux()
+        if system == "Windows":
+            wins = _windows_win32()
+        elif system == "Darwin":
+            wins = _windows_macos()
+        else:
+            wins = _windows_linux()
     except Exception:
         wins = []
+
     if browser_only:
         keywords = ("chrome", "google chrome", "chromium", "edge", "brave", "firefox", "arc", "opera")
         filtered = [w for w in wins if any(k in f"{w.owner} {w.title}".lower() for k in keywords)]
-        if filtered: return filtered
+        if filtered:
+            return filtered
     return wins
 
 
@@ -91,7 +109,8 @@ def focus_window(window: WindowInfo) -> None:
             candidates = [w for w in gw.getAllWindows() if (w.title or "").strip() == window.title]
             if candidates:
                 target = candidates[0]
-                if target.isMinimized: target.restore()
+                if target.isMinimized:
+                    target.restore()
                 target.activate()
         except Exception:
             pass

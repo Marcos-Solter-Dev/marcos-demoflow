@@ -65,6 +65,8 @@ class Action:
     element_label: str | None = None
     element_kind: str | None = None
     auto_click: bool = False
+
+    # V2.4: posição persistente dentro do documento/página, não apenas na tela.
     doc_x: float | None = None
     doc_y: float | None = None
     capture_scroll_y: float | None = None
@@ -114,6 +116,7 @@ def load_project(path: str) -> Project:
     return Project(actions=actions, recording=rec)
 
 
+# Compatibilidade simples com projetos/roteiros da V1.
 def save_actions(path: str, actions: list[Action]) -> None:
     save_project(path, actions, RecordingConfig())
 

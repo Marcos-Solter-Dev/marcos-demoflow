@@ -26,12 +26,23 @@ class ChromeTab:
 
 
 def _run_osascript(script: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=False)
+    return subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def list_chrome_tabs() -> list[ChromeTab]:
+    """Lista abas do Google Chrome no macOS via AppleScript.
+
+    Não usa DevTools/remote debugging e não altera a página.
+    Em outros sistemas retorna uma lista vazia.
+    """
     if platform.system() != "Darwin":
         return []
+
     delim = "<|DF|>"
     script = f'''
 if application "Google Chrome" is not running then return ""
@@ -51,22 +62,31 @@ end tell
     proc = _run_osascript(script)
     if proc.returncode != 0:
         return []
+
     result: list[ChromeTab] = []
     for raw in proc.stdout.splitlines():
         parts = raw.split(delim, 3)
         if len(parts) != 4:
             continue
         try:
-            wi = int(parts[0]); ti = int(parts[1])
+            wi = int(parts[0])
+            ti = int(parts[1])
         except ValueError:
             continue
-        result.append(ChromeTab(window_index=wi, tab_index=ti, title=parts[2].strip(), url=parts[3].strip()))
+        result.append(ChromeTab(
+            window_index=wi,
+            tab_index=ti,
+            title=parts[2].strip(),
+            url=parts[3].strip(),
+        ))
     return result
 
 
 def activate_chrome_tab(tab: ChromeTab) -> tuple[bool, str]:
+    """Ativa uma aba e tenta trazer a janela correspondente para a frente."""
     if platform.system() != "Darwin":
         return False, "Seleção direta de abas está disponível no macOS nesta versão."
+
     script = f'''
 if application "Google Chrome" is not running then return "CHROME_NOT_RUNNING"
 tell application "Google Chrome"
@@ -87,12 +107,18 @@ end tell
     response = (proc.stdout or "").strip()
     if proc.returncode == 0 and response.endswith("OK"):
         return True, ""
-    return False, (proc.stderr or response or "Não foi possível ativar a aba.").strip()
+    error = (proc.stderr or response or "Não foi possível ativar a aba.").strip()
+    return False, error
 
 
 def get_active_chrome_tab() -> ChromeTab | None:
+    """Retorna a aba ativa da janela frontal do Chrome no macOS.
+
+    Isso torna a opção "Usar aba atualmente ativa" realmente page-aware.
+    """
     if platform.system() != "Darwin":
         return None
+
     delim = "<|DF|>"
     script = f'''
 if application "Google Chrome" is not running then return ""
@@ -108,10 +134,16 @@ end tell
     proc = _run_osascript(script)
     if proc.returncode != 0:
         return None
-    parts = (proc.stdout or "").strip().split(delim, 3)
+    raw = (proc.stdout or "").strip()
+    parts = raw.split(delim, 3)
     if len(parts) != 4:
         return None
     try:
-        return ChromeTab(window_index=int(parts[0]), tab_index=int(parts[1]), title=parts[2].strip(), url=parts[3].strip())
+        return ChromeTab(
+            window_index=int(parts[0]),
+            tab_index=int(parts[1]),
+            title=parts[2].strip(),
+            url=parts[3].strip(),
+        )
     except (TypeError, ValueError):
         return None

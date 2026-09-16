@@ -22,7 +22,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .bootstrap/source.part*.txt | tr -d '\r\n' | base64 --decode > /tmp/demoflow-source.zip
+          {
+            cat .bootstrap/source.part00.txt
+            printf 'E'
+            cat .bootstrap/source.part01.txt
+            printf 'p'
+            cat .bootstrap/source.part02.txt
+            cat .bootstrap/source.part{03..14}.txt
+          } | tr -d '\r\n' | base64 --decode > /tmp/demoflow-source.zip
+          unzip -t /tmp/demoflow-source.zip
           unzip -oq /tmp/demoflow-source.zip -d .
           cp build_macos.command build_macos.sh
           chmod +x build_macos.sh build_macos.command build_all_from_mac.command run_macos.sh run_built_macos_debug.command setup_macos.sh
@@ -36,6 +44,8 @@ jobs:
           test -f assets/app_icon.ico
           test -f demoflow/engine.py
           test -f demoflow/dom_inspector.py
+          test -f demoflow/recorder.py
+          test -f demoflow/tour_builder.py
           python scripts/verify.py
 
       - name: Commit final repository

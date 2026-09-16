@@ -1,0 +1,19 @@
+name: Melhoria
+description: Sugerir uma mudança no DemoFlow
+title: "[Melhoria] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Necessidade
+      description: Qual problema ou fluxo você quer melhorar?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: Descreva a solução de forma objetiva.
+    validations:
+      required: true

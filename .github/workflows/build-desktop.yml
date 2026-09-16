@@ -1,0 +1,80 @@
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+      - name: Build
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed `
+            --name "Marcos DemoFlow" `
+            --icon "assets/app_icon.ico" `
+            --add-data "assets;assets" `
+            --collect-submodules pyautogui `
+            --collect-submodules mss `
+            app.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Marcos-DemoFlow-Windows
+          path: dist/Marcos DemoFlow.exe
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+      - name: Create icon
+        run: |
+          mkdir -p assets/MarcosDemoFlow.iconset
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          img = Image.open('assets/app_icon.png').convert('RGBA')
+          out = Path('assets/MarcosDemoFlow.iconset')
+          sizes = [
+              (16, 'icon_16x16.png'), (32, 'icon_16x16@2x.png'),
+              (32, 'icon_32x32.png'), (64, 'icon_32x32@2x.png'),
+              (128, 'icon_128x128.png'), (256, 'icon_128x128@2x.png'),
+              (256, 'icon_256x256.png'), (512, 'icon_256x256@2x.png'),
+              (512, 'icon_512x512.png'), (1024, 'icon_512x512@2x.png'),
+          ]
+          for size, name in sizes:
+              img.resize((size, size), Image.Resampling.LANCZOS).save(out / name)
+          PY
+          iconutil -c icns assets/MarcosDemoFlow.iconset -o assets/app_icon.icns
+      - name: Build
+        run: |
+          pyinstaller --noconfirm --clean --windowed --name "Marcos DemoFlow" --osx-bundle-identifier "com.marcosdev.demoflow" --icon "assets/app_icon.icns" --add-data "assets:assets" --collect-submodules Quartz --collect-submodules pyautogui --collect-submodules mss app.py
+          ditto -c -k --keepParent "dist/Marcos DemoFlow.app" "Marcos-DemoFlow-macOS.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Marcos-DemoFlow-macOS
+          path: Marcos-DemoFlow-macOS.zip
+          if-no-files-found: error
